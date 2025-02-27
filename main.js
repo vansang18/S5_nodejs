@@ -1,70 +1,99 @@
-let score1Key= "Toan";
-let score2Key= "Tin"
-let Student = function(name,age,score1,score2){
-    this.name = name;
-    this.age= age;
-    this.score= {
-        [score1Key]:score1,
-        [score2Key]:score2
-    }
-    this.getInfo = function(){
-        return `ten: ${this.name} tuoi: ${this.age} score1:${this.score[score1Key]} score2: ${this.score[score2Key]}`
+const URL = 'http://localhost:3000/posts';
+var global;
+LoadDataSync();
+
+async function LoadDataSync(){
+    let res = await fetch(URL);
+    let posts = await res.json();
+    posts = posts.filter(p=>!p.isDelete)
+    global = posts;
+    let body = document.getElementById("body");
+    body.innerHTML="";
+    for (const post of posts) {
+        body.innerHTML += ConvertFromObjToHtml(post);
     }
 }
 
-const student1 = new Student("Tung",16,2,2);
-let student2 = new Student("Toan",17,7,9);
-let student3 = new Student("Tien",20,3,4);
-let student4 = new Student("Tuan",21,4,4);
-let students = [student1,student2,student3,student4];
-// viet cau lenh duyet tat ca phan tu
-for (const student of students) {
-    console.log(student.getInfo());
+function checkExistID(id){
+    let ids = global.map(p=>p.id);
+    return  ids.includes(id+"");
 }
-for (const key in students) {
-    console.log(students[key]);
+function getMaxID(){
+    let ids = global.map(p=>Number.parseInt(p.id));
+    return  Math.max(...ids);
 }
-//
-let result = students.map(function(student){
-    if(student.age>=18){
-        return "18 Roi";
+
+function Save(){
+    let id = document.getElementById("id").value;
+    if(id.length==0||isNaN(id)){
+        id = (getMaxID()+1)+"";
+    }
+    let obj = {
+        id: id,
+        title: document.getElementById("title").value,
+        views: document.getElementById("views").value,
+    }
+    if(checkExistID(id)){
+        fetch(URL+"/"+id,{
+            method:'PUT',
+            headers:{
+                "Content-Type":"application/json"
+            },
+            body:JSON.stringify(obj)
+        }).then(
+            function(){
+                LoadDataSync();
+            }   
+        )
     }else{
-        return "Chua 18";
-    }
-});
-//let result = []
-// for (const student of students) {
-//     if(student.age>=18){
-//         result.push("18 Roi");
-//     }else{
-//         result.push("Chua 18");
-//     }
-// }
+    fetch(URL,{
+        method:'POST',
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify(obj)
+    }).then(
+        function(){
+            LoadDataSync();
+        }   
+    )
+    }  
+}
 
-let sum1 = students.reduce(function(sum,student){
-    return sum+=student.age;
-},0);
-//let sum
-// for (const student of students) {
-//     sum+=student.age
-// }
+function Delete(id){
+    let post = global.filter(p=>p.id==id)[0];
+    post.isDelete=true;
+    fetch(URL+"/"+id,{
+        method:'PUT',
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify(post)
+    }).then(
+        function(){
+            LoadDataSync();
+        }   
+    )
+}
 
-let _18Tuoi = students.filter(function(student){
-    return !(student.age>=18)
-})
-// let _18Tuoi = [];
-// for (const student of students) {
-//     if(student.age>=18){
-//         _18Tuoi.push(student); 
-//     }
-// }
-
-let checkGAE18 = students.every(function(student){
-    return student.age >=18 
-})
-let checkExistL18 = students.some(function(student){
-    return student.age >=18 
-});
-
-
+function LoadData(){
+    fetch(URL).then(
+        function(data){
+            return data.json();
+        }
+    ).then(
+        function(data){
+            console.log(data);
+        }
+    )
+}
+function ConvertFromObjToHtml(post){
+    let string = '<tr>';
+    string += `<td>${post.id}</td>`;
+    string += `<td>${post.title}</td>`;
+    string += `<td>${post.views}</td>`;
+    string += `<td><button  onclick="Delete(${post.id});return false;">Delete</button></td>`;
+    string += '</tr>';
+    return string;
+}
 
