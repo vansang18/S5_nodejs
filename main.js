@@ -1,99 +1,94 @@
-const URL = 'http://localhost:3000/posts';
-var global;
-LoadDataSync();
+const express = require('express')
+const app = express()
+const port = 3000
 
-async function LoadDataSync(){
-    let res = await fetch(URL);
-    let posts = await res.json();
-    posts = posts.filter(p=>!p.isDelete)
-    global = posts;
-    let body = document.getElementById("body");
-    body.innerHTML="";
-    for (const post of posts) {
-        body.innerHTML += ConvertFromObjToHtml(post);
-    }
-}
+app.use(express.json())
 
-function checkExistID(id){
-    let ids = global.map(p=>p.id);
-    return  ids.includes(id+"");
-}
-function getMaxID(){
-    let ids = global.map(p=>Number.parseInt(p.id));
-    return  Math.max(...ids);
-}
+var posts = [{
+    id: "1",
+    title: "a title",
+    views: 100
+  },
+  {
+    id: "2",
+    title: "another title",
+    views: 200
+  },
+  {
+    id: "3",
+    title: "heheehehe",
+    views: 340
+  }]
 
-function Save(){
-    let id = document.getElementById("id").value;
-    if(id.length==0||isNaN(id)){
-        id = (getMaxID()+1)+"";
+
+//http://127.0.0.1:3000/?view[$gte]=200&view[$lte]=300
+app.get('/', (req, res) => {
+    console.log(req.query);
+    let newPost = posts;
+    if(req.query.title){
+        newPost = newPost.filter(p=>p.title.includes(req.query.title))
     }
-    let obj = {
-        id: id,
-        title: document.getElementById("title").value,
-        views: document.getElementById("views").value,
+    if(req.query.view){
+        //view: { '$gte': '200', '$lte': '200' } 
+        //newPost = newPost.filter(p=>p.views>=req.query.view)
+        if(req.query.view.$gte){
+            newPost = newPost.filter(p=>p.views>=req.query.view.$gte)
+        }
+        if(req.query.view.$lte){
+            newPost = newPost.filter(p=>p.views<=req.query.view.$lte)
+        }
     }
-    if(checkExistID(id)){
-        fetch(URL+"/"+id,{
-            method:'PUT',
-            headers:{
-                "Content-Type":"application/json"
-            },
-            body:JSON.stringify(obj)
-        }).then(
-            function(){
-                LoadDataSync();
-            }   
-        )
+    res.send(newPost)
+})
+app.get('/:id', (req, res) => {
+    let id = req.params.id;
+    let post = posts.find(p=>p.id == id);
+    if(post){
+        res.status(200).send(post)
     }else{
-    fetch(URL,{
-        method:'POST',
-        headers:{
-            "Content-Type":"application/json"
-        },
-        body:JSON.stringify(obj)
-    }).then(
-        function(){
-            LoadDataSync();
-        }   
-    )
-    }  
-}
+        res.status(404).send({message:"iD khong ton tai"})
+    }
+})
+app.post('/', (req, res) => {
+   let post = req.body;
+    post.id = GenString(16);
+   posts.push(post);
+   res.status(200).send(post);
+})
+app.put('/:id', (req, res) => {
+    let id = req.params.id;
+    let post = posts.find(p=>p.id==id);
+    if(post){
+        post.title = req.body.title;
+        post.views = req.body.views;
+        res.status(200).send(post)
+    }else{
+        res.status(404).send({message:"iD khong ton tai"})
+    }
+ })
+ app.delete('/:id', (req, res) => {
+    let id = req.params.id;
+    let post = posts.find(p=>p.id==id);
+    if(post){
+        post.isDelete=true;
+        res.status(200).send(post)
+    }else{
+        res.status(404).send({message:"iD khong ton tai"})
+    }
+ })
 
-function Delete(id){
-    let post = global.filter(p=>p.id==id)[0];
-    post.isDelete=true;
-    fetch(URL+"/"+id,{
-        method:'PUT',
-        headers:{
-            "Content-Type":"application/json"
-        },
-        body:JSON.stringify(post)
-    }).then(
-        function(){
-            LoadDataSync();
-        }   
-    )
-}
 
-function LoadData(){
-    fetch(URL).then(
-        function(data){
-            return data.json();
-        }
-    ).then(
-        function(data){
-            console.log(data);
-        }
-    )
-}
-function ConvertFromObjToHtml(post){
-    let string = '<tr>';
-    string += `<td>${post.id}</td>`;
-    string += `<td>${post.title}</td>`;
-    string += `<td>${post.views}</td>`;
-    string += `<td><button  onclick="Delete(${post.id});return false;">Delete</button></td>`;
-    string += '</tr>';
-    return string;
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`)
+})
+
+function GenString(length){
+    let source = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+    let result = "";
+    for (let index = 0; index < length; index++) {
+        let rd = Math.floor(Math.random()*source.length);
+        result+=source.charAt(rd);
+    }
+    return result;
 }
 
