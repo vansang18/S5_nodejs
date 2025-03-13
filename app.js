@@ -4,6 +4,7 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var mongoose = require('mongoose')
+let {CreateErrorRes} = require('./utils/responseHandler')
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -39,8 +40,8 @@ app.use(function(err, req, res, next) {
   res.locals.error = req.app.get('env') === 'development' ? err : {};
 
   // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+  //res.status(err.status || 500);
+  CreateErrorRes(res,err.message,err.status||500);
 });
 
 module.exports = app;
